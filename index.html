@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Machine Fault Dashboard</title>
+
+```
+<!-- PWA App-like features -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-title" content="Fault Dashboard">
+<meta name="application-name" content="Fault Dashboard">
+
+<!-- Prevent browser UI from showing -->
+<meta name="format-detection" content="telephone=no">
+<meta name="msapplication-tap-highlight" content="no">
+
+<!-- Icons for Add to Home Screen -->
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDE4MCAxODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiByeD0iNDAiIGZpbGw9IiMwYTBhMGEiLz4KPHRleHQgeD0iOTAiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMDBmZjg4Ij7wn5OKIE10ZXh0Pgo8L3N2Zz4=">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0a0a0a;
+        color: #e0e0e0;
+        min-height: 100vh;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+        overscroll-behavior: none;
+    }
+    
+    .mobile-dashboard {
+        width: 100%;
+        padding: 0.75rem;
+        padding-bottom: 80px;
+    }
+    
+    .header {
+        text-align: center;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: linear-gradient(135deg, rgba(0,255,136,0.1) 0%, rgba(0,170,255,0.1) 100%);
+        border-radius: 1rem;
+        border: 1px solid rgba(0,255,136,0.3);
+    }
+    
+    .header h1 {
+        font-size: 1.75rem;
+        background: linear-gradient(135deg, #00ff88, #00aaff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+    }
+    
+    .header p {
+        font-size: 0.85rem;
+        color: #999;
+        line-height: 1.4;
+    }
+    
+    .summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .summary-card {
+        background: linear-gradient(135deg, #1a1a2e 0%, #0f1419 100%);
+        border: 1px solid #2a2a4e;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .summary-card.full-width {
+        grid-column: 1 / -1;
+    }
+    
+    .summary-card.critical {
+        border-color: #ff4444;
+        background: linear-gradient(135deg, #2a1a1a 0%, #1a0f0f 100%);
+    }
+    
+    .summary-card.warning {
+        border-color: #ffaa00;
+        background: linear-gradient(135deg, #2a2a1a 0%, #1a1a0f 100%);
+    }
+    
+    .card-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .card-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #00ff88;
+        margin-bottom: 0.25rem;
+    }
+    
+    .critical .card-value {
+        color: #ff4444;
+    }
+    
+    .warning .card-value {
+        color: #ffaa00;
+    }
+    
+    .card-label {
+        font-size: 0.75rem;
+        color: #999;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .card-subtitle {
+        font-size: 0.7rem;
+        color: #666;
+        margin-top: 0.2rem;
+    }
+    
+    .section {
+        background: #0f1419;
+        border: 1px solid #1a2332;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        color: #00aaff;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .section-subtitle {
+        font-size: 0.75rem;
+        color: #666;
+        font-weight: normal;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 250px;
+        margin-bottom: 1rem;
+    }
+    
+    .chart-container.small {
+        height: 200px;
+    }
+    
+    .data-table {
+        width: 100%;
+        font-size: 0.85rem;
+    }
+    
+    .data-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #1a2332;
+    }
+    
+    .data-row:last-child {
+        border-bottom: none;
+    }
+    
+    .data-label {
+        color: #aaa;
+        flex: 1;
+    }
+    
+    .data-value {
+        text-align: right;
+        font-weight: 600;
+        flex: 0 0 auto;
+    }
+    
+    .data-badge {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.7rem;
+        font-weight: bold;
+        margin-left: 0.5rem;
+    }
+    
+    .badge-critical {
+        background: rgba(255, 68, 68, 0.2);
+        color: #ff4444;
+        border: 1px solid #ff4444;
+    }
+    
+    .badge-warning {
+        background: rgba(255, 170, 0, 0.2);
+        color: #ffaa00;
+        border: 1px solid #ffaa00;
+    }
+    
+    .badge-good {
+        background: rgba(68, 255, 68, 0.2);
+        color: #44ff44;
+        border: 1px solid #44ff44;
+    }
+    
+    .insight-box {
+        background: linear-gradient(135deg, rgba(0,170,255,0.1) 0%, rgba(0,255,136,0.1) 100%);
+        border: 1px solid rgba(0,170,255,0.3);
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+        margin: 0.75rem 0;
+    }
+    
+    .insight-box h4 {
+        color: #00aaff;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .insight-box p {
+        font-size: 0.8rem;
+        color: #ccc;
+        line-height: 1.5;
+        margin-bottom: 0.5rem;
+    }
+    
+    .insight-box p:last-child {
+        margin-bottom: 0;
+    }
+    
+    .pattern-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+    
+    .pattern-item {
+        background: rgba(255,255,255,0.05);
+        border-radius: 0.4rem;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+        text-align: center;
+    }
+    
+    .pattern-item strong {
+        color: #00ff88;
+        display: block;
+        margin-bottom: 0.2rem;
+    }
+    
+    .expandable {
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .expandable::after {
+        content: '▼';
+        float: right;
+        color: #666;
+        transition: transform 0.3s;
+    }
+    
+    .expandable.collapsed::after {
+        transform: rotate(-90deg);
+    }
+    
+    .expandable-content {
+        max-height: 1000px;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+    }
+    
+    .expandable-content.collapsed {
+        max-height: 0;
+    }
+    
+    .scroll-table {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -0.5rem;
+        padding: 0 0.5rem;
+    }
+    
+    .scroll-table table {
+        width: 100%;
+        min-width: 400px;
+        border-collapse: collapse;
+        font-size: 0.75rem;
+    }
+    
+    .scroll-table th {
+        background: #1a2332;
+        color: #00ff88;
+        padding: 0.5rem;
+        text-align: left;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+    
+    .scroll-table td {
+        padding: 0.5rem;
+        border-bottom: 1px solid #1a2332;
+        color: #e0e0e0;
+    }
+    
+    .scroll-table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .severity-critical {
+        color: #ff4444;
+        font-weight: bold;
+    }
+    
+    .severity-high {
+        color: #ff6666;
+        font-weight: bold;
+    }
+    
+    .severity-medium {
+        color: #ffaa00;
+        font-weight: bold;
+    }
+    
+    .severity-low {
+        color: #44ff44;
+    }
+    
+    .recommendation-list {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .recommendation-list li {
+        padding: 0.75rem;
+        margin: 0.5rem 0;
+        background: rgba(0,255,136,0.05);
+        border-left: 3px solid #00ff88;
+        border-radius: 0.3rem;
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+    
+    .recommendation-list li strong {
+        color: #00ff88;
+        display: block;
+        margin-bottom: 0.2rem;
+    }
+    
+    .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #0f1419;
+        border-top: 1px solid #1a2332;
+        padding: 0.5rem;
+        display: flex;
+        justify-content: space-around;
+        z-index: 100;
+    }
+    
+    .nav-item {
+        flex: 1;
+        text-align: center;
+        padding: 0.5rem;
+        color: #666;
+        font-size: 0.75rem;
+        text-decoration: none;
+        transition: color 0.3s;
+    }
+    
+    .nav-item.active {
+        color: #00ff88;
+    }
+    
+    .nav-item span {
+        display: block;
+        font-size: 1.2rem;
+        margin-bottom: 0.2rem;
+    }
+    
+    @media (max-width: 320px) {
+        .summary-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .pattern-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (min-width: 768px) {
+        .mobile-dashboard {
+            max-width: 768px;
+            margin: 0 auto;
+        }
+        
+        .summary-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+</style>
+```
+
+</head>
+<body>
+    <div class="mobile-dashboard">
+        <div class="header">
+            <h1>Machine Fault Dashboard</h1>
+            <p>Real-time Performance Analysis</p>
+            <p style="font-size: 0.75rem; margin-top: 0.25rem;">June 2025 Data</p>
+        </div>
+
+```
+    <div class="summary-grid">
+        <div class="summary-card critical">
+            <div class="card-icon">🚨</div>
+            <div class="card-value">382.8h</div>
+            <div class="card-label">Downtime</div>
+            <div class="card-subtitle">15.9 days</div>
+        </div>
+        <div class="summary-card">
+            <div class="card-icon">⚠️</div>
+            <div class="card-value">1,128</div>
+            <div class="card-label">Alarms</div>
+            <div class="card-subtitle">161/day</div>
+        </div>
+        <div class="summary-card warning">
+            <div class="card-icon">📉</div>
+            <div class="card-value">68.5%</div>
+            <div class="card-label">Availability</div>
+            <div class="card-subtitle">Target: 85%</div>
+        </div>
+        <div class="summary-card critical">
+            <div class="card-icon">💰</div>
+            <div class="card-value">$191k</div>
+            <div class="card-label">Cost Impact</div>
+            <div class="card-subtitle">Monthly loss</div>
+        </div>
+        <div class="summary-card full-width">
+            <div style="display: flex; justify-content: space-around; align-items: center;">
+                <div>
+                    <div class="card-icon">🏭</div>
+                    <div class="card-value" style="font-size: 1.2rem;">7</div>
+                    <div class="card-label">Machines</div>
+                </div>
+                <div>
+                    <div class="card-icon">⏱️</div>
+                    <div class="card-value" style="font-size: 1.2rem;">20.4min</div>
+                    <div class="card-label">Avg Repair</div>
+                </div>
+                <div>
+                    <div class="card-icon">🔧</div>
+                    <div class="card-value" style="font-size: 1.2rem; color: #ff4444;">2</div>
+                    <div class="card-label">Critical</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="insight-box">
+        <h4>🔍 Critical Alert</h4>
+        <p><strong>FL17286 Emergency:</strong> Operating at only 22.4% availability - immediate action required!</p>
+        <p><strong>Peak Failures:</strong> 5PM (94.5h) and 5AM (68h) show extreme downtime - shift change issues suspected.</p>
+    </div>
+    
+    <div class="section" id="overview">
+        <h2 class="section-title">
+            Machine Performance
+            <span class="section-subtitle">By downtime</span>
+        </h2>
+        <div class="chart-container">
+            <canvas id="machineChart"></canvas>
+        </div>
+        
+        <div class="data-table">
+            <div class="data-row">
+                <span class="data-label">FL17286</span>
+                <span class="data-value">
+                    130.4h
+                    <span class="data-badge badge-critical">22.4%</span>
+                </span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">PL19017</span>
+                <span class="data-value">
+                    87.4h
+                    <span class="data-badge badge-critical">48.0%</span>
+                </span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">JOB682_LOGSAW</span>
+                <span class="data-value">
+                    62.9h
+                    <span class="data-badge badge-warning">62.4%</span>
+                </span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">MR3111</span>
+                <span class="data-value">
+                    58.4h
+                    <span class="data-badge badge-warning">56.2%</span>
+                </span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">JOB682_COREMAKER</span>
+                <span class="data-value">
+                    33.5h
+                    <span class="data-badge badge-good">80.0%</span>
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section" id="patterns">
+        <h2 class="section-title">
+            24-Hour Pattern
+            <span class="section-subtitle">Fault timing</span>
+        </h2>
+        <div class="chart-container">
+            <canvas id="hourlyChart"></canvas>
+        </div>
+        
+        <div class="insight-box">
+            <p><strong>Critical Hours:</strong> 5PM shows 66 faults with 94.5h downtime - possible end-of-shift rushing or handover issues.</p>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2 class="section-title">
+            Fault Categories
+            <span class="section-subtitle">Root causes</span>
+        </h2>
+        <div class="chart-container small">
+            <canvas id="categoryChart"></canvas>
+        </div>
+        
+        <div class="pattern-grid">
+            <div class="pattern-item">
+                <strong>25.3%</strong>
+                Undefined
+            </div>
+            <div class="pattern-item">
+                <strong>24.5%</strong>
+                Jam - Products
+            </div>
+            <div class="pattern-item">
+                <strong>23.4%</strong>
+                Emergency Stop
+            </div>
+            <div class="pattern-item">
+                <strong>14.1%</strong>
+                Utilities Lack
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2 class="section-title expandable" onclick="toggleSection('reliability')">
+            Reliability Metrics
+        </h2>
+        <div class="expandable-content" id="reliability">
+            <div class="scroll-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Machine</th>
+                            <th>MTBF</th>
+                            <th>MTTR</th>
+                            <th>Avail%</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>FL17286</td>
+                            <td class="severity-critical">0.2h</td>
+                            <td class="severity-critical">35.1m</td>
+                            <td class="severity-critical">22.4%</td>
+                            <td><span class="severity-critical">●</span></td>
+                        </tr>
+                        <tr>
+                            <td>PL19017</td>
+                            <td class="severity-high">0.7h</td>
+                            <td class="severity-high">43.3m</td>
+                            <td class="severity-high">48.0%</td>
+                            <td><span class="severity-high">●</span></td>
+                        </tr>
+                        <tr>
+                            <td>LOGSAW</td>
+                            <td class="severity-medium">0.7h</td>
+                            <td class="severity-medium">25.0m</td>
+                            <td class="severity-medium">62.4%</td>
+                            <td><span class="severity-medium">●</span></td>
+                        </tr>
+                        <tr>
+                            <td>MR3111</td>
+                            <td class="severity-high">0.3h</td>
+                            <td>12.6m</td>
+                            <td class="severity-medium">56.2%</td>
+                            <td><span class="severity-medium">●</span></td>
+                        </tr>
+                        <tr>
+                            <td>COREMAKER</td>
+                            <td>0.7h</td>
+                            <td>11.0m</td>
+                            <td class="severity-low">80.0%</td>
+                            <td><span class="severity-low">●</span></td>
+                        </tr>
+                        <tr>
+                            <td>REWINDER</td>
+                            <td>0.9h</td>
+                            <td>3.7m</td>
+                            <td class="severity-low">93.9%</td>
+                            <td><span class="severity-low">●</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section" id="faults">
+        <h2 class="section-title expandable" onclick="toggleSection('topfaults')">
+            Top Critical Faults
+        </h2>
+        <div class="expandable-content" id="topfaults">
+            <div class="scroll-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Description</th>
+                            <th>Time</th>
+                            <th>Count</th>
+                            <th>Avg</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>132</td>
+                            <td>Reset Axis Not OK</td>
+                            <td class="severity-critical">53:56:22</td>
+                            <td>17</td>
+                            <td class="severity-critical">3h 10m</td>
+                        </tr>
+                        <tr>
+                            <td>32101</td>
+                            <td>Fast stop pressed</td>
+                            <td class="severity-critical">46:49:41</td>
+                            <td>81</td>
+                            <td class="severity-high">34m</td>
+                        </tr>
+                        <tr>
+                            <td>278</td>
+                            <td>Timeout Forks Lift</td>
+                            <td class="severity-critical">34:28:04</td>
+                            <td>3</td>
+                            <td class="severity-critical">11h 29m</td>
+                        </tr>
+                        <tr>
+                            <td>9</td>
+                            <td>Emergency STOP</td>
+                            <td class="severity-critical">28:11:32</td>
+                            <td>3</td>
+                            <td class="severity-critical">9h 23m</td>
+                        </tr>
+                        <tr>
+                            <td>17057</td>
+                            <td>Core Bin Full</td>
+                            <td class="severity-critical">25:53:56</td>
+                            <td>37</td>
+                            <td class="severity-high">42m</td>
+                        </tr>
+                        <tr>
+                            <td>246</td>
+                            <td>Pack position check</td>
+                            <td class="severity-critical">25:46:29</td>
+                            <td>42</td>
+                            <td class="severity-high">36m</td>
+                        </tr>
+                        <tr>
+                            <td>32</td>
+                            <td>Infeed guard 59</td>
+                            <td class="severity-critical">23:22:04</td>
+                            <td>17</td>
+                            <td class="severity-critical">1h 22m</td>
+                        </tr>
+                        <tr>
+                            <td>20</td>
+                            <td>Infeed guard 56</td>
+                            <td class="severity-high">17:53:05</td>
+                            <td>27</td>
+                            <td class="severity-high">39m</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2 class="section-title">
+            Zone Analysis
+            <span class="section-subtitle">Problem areas</span>
+        </h2>
+        <div class="chart-container small">
+            <canvas id="zoneChart"></canvas>
+        </div>
+        
+        <div class="data-table">
+            <div class="data-row">
+                <span class="data-label">LOWER MACHINE BODY</span>
+                <span class="data-value severity-critical">85.7h</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">LOG SAW</span>
+                <span class="data-value severity-critical">62.9h</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">INFEED PALLET</span>
+                <span class="data-value severity-critical">56.9h</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">INFEED</span>
+                <span class="data-value severity-high">45.3h</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2 class="section-title">
+            Recurring Patterns
+            <span class="section-subtitle">Self-repeating</span>
+        </h2>
+        <div class="pattern-grid">
+            <div class="pattern-item">
+                <strong>163→163</strong>
+                50 times
+            </div>
+            <div class="pattern-item">
+                <strong>18068→18068</strong>
+                48 times
+            </div>
+            <div class="pattern-item">
+                <strong>32101→32101</strong>
+                34 times
+            </div>
+            <div class="pattern-item">
+                <strong>307→307</strong>
+                29 times
+            </div>
+        </div>
+        <div class="insight-box" style="margin-top: 0.75rem;">
+            <p>These self-repeating patterns indicate unresolved root causes that need investigation.</p>
+        </div>
+    </div>
+    
+    <div class="section" id="recommendations">
+        <h2 class="section-title">
+            📊 Action Items
+            <span class="section-subtitle">Priority list</span>
+        </h2>
+        <ul class="recommendation-list">
+            <li>
+                <strong>FL17286 - CRITICAL</strong>
+                22.4% availability = $65k/month loss. Needs immediate overhaul or replacement.
+            </li>
+            <li>
+                <strong>5PM & 5AM Shifts</strong>
+                162.5h downtime (42%). Add dedicated support during these critical hours.
+            </li>
+            <li>
+                <strong>Recurring Faults</strong>
+                Fix codes 163, 18068, 32101 self-loops. Root cause analysis required.
+            </li>
+            <li>
+                <strong>Zone Inspection</strong>
+                Lower Machine Body & Infeed Pallet average >1h repairs. Physical inspection needed.
+            </li>
+            <li>
+                <strong>Emergency Stops</strong>
+                23.4% of downtime. Investigate false triggers vs real safety issues.
+            </li>
+            <li>
+                <strong>Catastrophic Failures</strong>
+                Codes 132, 278, 9 average >8h. Implement predictive maintenance.
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="bottom-nav">
+    <a href="#overview" class="nav-item active">
+        <span>📊</span>
+        Overview
+    </a>
+    <a href="#patterns" class="nav-item">
+        <span>📈</span>
+        Patterns
+    </a>
+    <a href="#faults" class="nav-item">
+        <span>⚠️</span>
+        Faults
+    </a>
+    <a href="#recommendations" class="nav-item">
+        <span>💡</span>
+        Actions
+    </a>
+</div>
+
+<script>
+    // Toggle expandable sections
+    function toggleSection(id) {
+        const content = document.getElementById(id);
+        const header = content.previousElementSibling;
+        content.classList.toggle('collapsed');
+        header.classList.toggle('collapsed');
+    }
+    
+    // Navigation active state
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            this.classList.add('active');
+            const target = this.getAttribute('href');
+            document.querySelector(target).scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+    
+    // PWA Features
+    // Prevent pull-to-refresh
+    let lastTouchY = 0;
+    let preventPullToRefresh = false;
+
+    document.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        lastTouchY = e.touches[0].clientY;
+        preventPullToRefresh = window.pageYOffset === 0;
+    });
+
+    document.addEventListener('touchmove', (e) => {
+        const touchY = e.touches[0].clientY;
+        const touchYDelta = touchY - lastTouchY;
+        lastTouchY = touchY;
+        if (preventPullToRefresh && touchYDelta > 0) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+    
+    // Add to home screen prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        // Show your own install button/banner here if needed
+    });
+    
+    // Detect if running as installed app
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+        document.body.classList.add('standalone-app');
+    }
+    
+    // Make status bar transparent on iOS
+    if ('standalone' in window.navigator && window.navigator.standalone) {
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+    }
+    
+    // Wait for Chart.js to load
+    window.addEventListener('load', function() {
+        // Chart defaults for mobile
+        Chart.defaults.font.size = 10;
+        Chart.defaults.color = '#aaa';
+        Chart.defaults.plugins.legend.display = false;
+        
+        // Machine performance chart
+        const machineCtx = document.getElementById('machineChart').getContext('2d');
+        new Chart(machineCtx, {
+            type: 'bar',
+            data: {
+                labels: ['FL17286', 'PL19017', 'LOGSAW', 'MR3111', 'COREMAKER', 'REWINDER'],
+                datasets: [{
+                    data: [130.41, 87.36, 62.89, 58.35, 33.53, 10.23],
+                    backgroundColor: [
+                        'rgba(255, 68, 68, 0.7)',
+                        'rgba(255, 68, 68, 0.7)',
+                        'rgba(255, 170, 0, 0.7)',
+                        'rgba(255, 170, 0, 0.7)',
+                        'rgba(68, 255, 68, 0.7)',
+                        'rgba(68, 255, 68, 0.7)'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const availability = [22.4, 48.0, 62.4, 56.2, 80.0, 93.9];
+                                return [
+                                    `Downtime: ${context.parsed.y.toFixed(1)}h`,
+                                    `Availability: ${availability[context.dataIndex]}%`
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#1a2332', drawBorder: false },
+                        ticks: {
+                            callback: function(value) {
+                                return value + 'h';
+                            }
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Hourly pattern chart
+        const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+        const hours = Array.from({length: 24}, (_, i) => i);
+        const hourlyDurations = [6.7, 5.9, 3.8, 4.2, 13.5, 68.0, 8.3, 7.1, 9.4, 5.2, 6.8, 8.9, 
+                                11.3, 14.2, 12.7, 10.9, 20.1, 94.5, 58.8, 7.2, 5.1, 4.3, 3.9, 5.7];
+        
+        new Chart(hourlyCtx, {
+            type: 'line',
+            data: {
+                labels: hours.map(h => h % 6 === 0 ? `${h}:00` : ''),
+                datasets: [{
+                    data: hourlyDurations,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                return `Hour ${context[0].dataIndex}:00`;
+                            },
+                            label: function(context) {
+                                return `Time lost: ${context.parsed.y.toFixed(1)}h`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#1a2332', drawBorder: false },
+                        ticks: {
+                            callback: function(value) {
+                                return value + 'h';
+                            }
+                        }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+        
+        // Category chart
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Undefined', 'Jam - Products', 'Emergency stop', 'Utilities Lack', 'Materials', 'Others'],
+                datasets: [{
+                    data: [97.03, 93.71, 89.50, 53.94, 18.43, 30.18],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(255, 159, 64, 0.8)'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = 382.79;
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return `${context.parsed.toFixed(1)}h (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Zone chart
+        const zoneCtx = document.getElementById('zoneChart').getContext('2d');
+        new Chart(zoneCtx, {
+            type: 'bar',
+            data: {
+                labels: ['LOWER BODY', 'LOG SAW', 'INFEED PAL', 'INFEED', 'UPPER BODY'],
+                datasets: [{
+                    data: [85.7, 62.9, 56.9, 45.3, 38.9],
+                    backgroundColor: [
+                        'rgba(255, 68, 68, 0.7)',
+                        'rgba(255, 68, 68, 0.7)',
+                        'rgba(255, 68, 68, 0.7)',
+                        'rgba(255, 170, 0, 0.7)',
+                        'rgba(255, 170, 0, 0.7)'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: { color: '#1a2332', drawBorder: false },
+                        ticks: {
+                            callback: function(value) {
+                                return value + 'h';
+                            }
+                        }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { 
+                            font: { size: 9 }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+```
+
+</body>
+</html>
